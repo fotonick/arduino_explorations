@@ -258,8 +258,10 @@ CPPFLAGS += -I. -Iutil -Iutility -I $(ARDUINOCOREDIR)
 CPPFLAGS += -I $(ARDUINODIR)/hardware/arduino/variants/$(BOARD_BUILD_VARIANT)/
 CPPFLAGS += $(addprefix -I $(ARDUINODIR)/libraries/, $(LIBRARIES))
 CPPFLAGS += $(patsubst %, -I $(ARDUINODIR)/libraries/%/utility, $(LIBRARIES))
+CPPFLAGS += -Wall -pedantic
 CPPDEPFLAGS = -MMD -MP -MF .dep/$<.dep
 CPPINOFLAGS := -x c++ -include $(ARDUINOCOREDIR)/Arduino.h
+CINOFLAGS := -std=c99 -x c -include $(ARDUINOCOREDIR)/Arduino.h
 AVRDUDEFLAGS := $(addprefix -C , $(AVRDUDECONF)) -DV
 AVRDUDEFLAGS += -p $(BOARD_BUILD_MCU) -P $(SERIALDEV)
 AVRDUDEFLAGS += -c $(BOARD_UPLOAD_PROTOCOL) -b $(BOARD_UPLOAD_SPEED)
@@ -351,7 +353,7 @@ $(TARGET).elf: $(ARDUINOLIB) $(OBJECTS)
 
 %.o: %.ino
 	mkdir -p .dep/$(dir $<)
-	$(COMPILE.cpp) $(CPPDEPFLAGS) -o $@ $(CPPINOFLAGS) $<
+	$(COMPILE.c) $(CPPDEPFLAGS) -o $@ $(CINOFLAGS) $<
 
 %.o: %.pde
 	mkdir -p .dep/$(dir $<)
