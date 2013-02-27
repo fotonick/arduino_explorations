@@ -3,23 +3,25 @@
  *
  * Blink a given message onto a pin, presumable holding an LED in series with a resistor.
  */
-const unsigned int pin = 8;
-const char message[] = "NICK HEARTS MARIE STOP";
+
+#include <Arduino.h>
+
+#define pin 8
+static char message[] = "NICK HEARTS MARIE STOP";
 
 /*
  * Morse code
- * NB: delay() takes unsigned long
  */
-const unsigned long dotLength_ms = 100;  /* this is the only configurable knob; 50 ms is standard */
-const unsigned long dashLength_ms = 3 * dotLength_ms;
-const unsigned long blinkSpaceLength_ms = dotLength_ms;
-const unsigned long charSpaceLength_ms = 3 * dotLength_ms;
-const unsigned long wordSpaceLength_ms = 7 * dotLength_ms;
+#define dotLength_ms 100  /* this is the only configurable knob; 50 ms is standard */
+#define dashLength_ms (3 * dotLength_ms)
+#define blinkSpaceLength_ms dotLength_ms
+#define charSpaceLength_ms (3 * dotLength_ms)
+#define wordSpaceLength_ms (7 * dotLength_ms)
 
 /* The 3 high bits are length; 5 low bits are dots (0) or dashes (1).
    The LSB is the first symbol, so you read them right to left. */
 #define NUM_MORSE_SYMBOLS 36  /* capital letters plus numerals */
-const byte morseEncoding[] = {
+static byte morseEncoding[] = {
 	B10111111,  /* 0 is ----- */
 	B10111110,  /* 1 is .---- */
 	B10111100,  /* 2 is ..--- */
@@ -65,25 +67,20 @@ const byte morseEncoding[] = {
 	B10000011  /* Z is --.. */
 };
 
-void dot() {
+static void dot() {
 	digitalWrite(pin, HIGH);
 	delay(dotLength_ms);
 	digitalWrite(pin, LOW);
 }
 
-void dash() {
+static void dash() {
 	digitalWrite(pin, HIGH);
 	delay(dashLength_ms);
 	digitalWrite(pin, LOW);
 }
 
-void setup() {
-	digitalWrite(pin, LOW);
-	pinMode(pin, OUTPUT);
-}
-
 size_t messageIdx = 0;
-void advanceChar() {
+static void advanceChar() {
 	messageIdx++;
 	if (messageIdx >= strlen(message)) {
 		delay(wordSpaceLength_ms);  /* add implicit space before looping */
@@ -91,31 +88,41 @@ void advanceChar() {
 	}
 }
 
+void setup() {
+	digitalWrite(pin, LOW);
+	pinMode(pin, OUTPUT);
+}
+
 /* proceed one character per cycle */
 void loop() {
-	byte messageChar = message[messageIdx];
+	byte encodedChar;
+	byte charNumSymbols;
 
-	/* special cases */
+	/* read next char */
+	char messageChar = message[messageIdx];
+
+	/* handle special cases and validate input */
 	if (messageChar == ' ') {  /* space */
 		delay(wordSpaceLength_ms - charSpaceLength_ms - blinkSpaceLength_ms);
 		advanceChar();
 		return;
-	} else if (messageChar > '9' && messageChar < 'A') {  /* Invalid char! Skip. */
+	} else if (messageChar < '0' ||
+		       (messageChar > '9' && messageChar < 'A') ||
+		       messageChar > 'Z') {  /* Invalid char! Skip. */
 		advanceChar();
 		return;
 	}
 
 	/* unpack current character encoding */
-	byte encodedChar = morseEncoding[messageChar - '0'];
-	byte charNumSymbols = encodedChar >> 5;  /* top three bits */
-	byte charSymbols = encodedChar & 0x1F;  /* bottom five bits */ 
+	encodedChar = morseEncoding[messageChar - '0'];
+	charNumSymbols = encodedChar >> 5;  /* top three bits */
 
 	/* iterate over symbols in char frorm right to left */
 	while (charNumSymbols--) {
-		if (charSymbols & 1) dash();
+		if (encodedChar & 1) dash();
 		else dot();
 		delay(blinkSpaceLength_ms);
-		charSymbols >>= 1;
+		encodedChar >>= 1;
 	}
 
 	/* terminate char */
